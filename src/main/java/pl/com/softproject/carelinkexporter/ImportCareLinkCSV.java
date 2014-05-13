@@ -68,7 +68,7 @@ public class ImportCareLinkCSV {
 
         int lp = 0;
 
-        Mensuration nextRecord = null;
+        Mensuration previousRecord = null;
         Mensuration currentRecord = null;
         
         while (reader.readRecord()) {
@@ -82,36 +82,31 @@ public class ImportCareLinkCSV {
                     continue;
                 }
                 
-                if(reader.readRecord()) {
-                    nextRecord = processRecord(++lp, reader);
-                    if(nextRecord.getRecordType() != null) {
-                        final Duration durationBetweenRecords = Duration.between(currentRecord.getDate(), nextRecord.getDate());
-                        System.out.println(DurationFormatter.format(durationBetweenRecords) + " " + currentRecord.getLp() + " do " + nextRecord.getLp());
-                        if(durationBetweenRecords.compareTo(durationToMerge) < 0) {
-                            mergeRecords(currentRecord, nextRecord);
+                if(previousRecord != null) {
+                    if(previousRecord.getRecordType() != null) {
+                        final Duration durationBetweenRecords = Duration.between(previousRecord.getDate(), currentRecord.getDate());
+                        System.out.println(DurationFormatter.format(durationBetweenRecords) + " " + currentRecord.getLp() + " do " + previousRecord.getLp());
+                        if(durationBetweenRecords.compareTo(durationToMerge) < 0 && checkCanMerge(currentRecord, previousRecord)) {
+                            mergeRecords(currentRecord, previousRecord);
+                            System.out.println("current " + currentRecord);
+                            System.out.println("merged " + previousRecord);
+                            previousRecord = currentRecord;
+                            lp++;
+                            continue;
                         }
                     }
                 }
                 
-                
                 System.out.println(currentRecord);
 
-                if(currentRecord.getRecordType() != null)
-                    res.add(currentRecord);
-
-                System.out.println(nextRecord);
-                if(nextRecord.getRecordType() != null)
-                    res.add(nextRecord);
+                res.add(currentRecord);
+                previousRecord = currentRecord;
 
                 lp++;
-                
                 
             } catch (ParseException | RuntimeException ex) {
                 logger.log(Level.SEVERE, "błąd parsowania wartości z pliku " + ex.getMessage(), ex);
             } 
-            
-            
-            
         }
         return res;
     }
@@ -166,19 +161,24 @@ public class ImportCareLinkCSV {
     private double parseBolus(String bolus) throws ParseException {
         return nf.parse(bolus).doubleValue();
     }
+    
+    private boolean checkCanMerge(Mensuration currentRecord, Mensuration prevRecord) {
+        return (prevRecord.getRecordType() == RecordType.GLUCOSE && currentRecord.getRecordType() == RecordType.BOLUS) 
+                || (prevRecord.getRecordType() == RecordType.BOLUS && currentRecord.getRecordType() == RecordType.GLUCOSE);
+    }
 
-    private void mergeRecords(Mensuration currentRecord, Mensuration nextRecord) {
+    private void mergeRecords(Mensuration currentRecord, Mensuration prevRecord) {
         
-        if(currentRecord.getBolusType() != null && nextRecord.getRecordType() == RecordType.GLUCOSE) {
-            currentRecord.setGlucose(nextRecord.getGlucose());
-            currentRecord.setRecordType(RecordType.MERGED);
-            nextRecord.setRecordType(null);
-        } else if(nextRecord.getBolusType() != null && currentRecord.getRecordType() == RecordType.GLUCOSE) {
-            nextRecord.setGlucose(currentRecord.getGlucose());
-            nextRecord.setRecordType(RecordType.MERGED);
-            currentRecord.setRecordType(null);
+        if(currentRecord.getRecordType() == RecordType.GLUCOSE) {
+            prevRecord.setGlucose(currentRecord.getGlucose());
+        } else {
+            prevRecord.setBolusTime(currentRecord.getBolusTime());
+            prevRecord.setBolusType(currentRecord.getBolusType());
+            prevRecord.setBolusValue(currentRecord.getBolusValue());
+            prevRecord.setDeleyedBolusValue(currentRecord.getDeleyedBolusValue());
         }
         
+        prevRecord.setRecordType(RecordType.MERGED);
     }
 
 }
