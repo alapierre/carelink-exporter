@@ -5,6 +5,7 @@
 package pl.com.softproject.carelinkexporter;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalUnit;
@@ -25,6 +26,17 @@ public class ImportCareLinkCSVTest {
     
     ImportCareLinkCSV importCareLinkCSV = new ImportCareLinkCSV();
     
+    @Test
+    public void testExportCSV() throws Exception {
+        
+        ExportToExcel exportToExcel = new ExportToExcel();
+        
+        File file = new File("D:\\realizacje\\SoftProject\\diabetyk\\exporter\\CareLink-Export-1400057247955.csv");
+        
+        exportToExcel.exportToCVS(file, 11);
+        
+    }
+    
     
     /**
      * Test of read method, of class ImportCareLinkCSV.
@@ -39,7 +51,7 @@ public class ImportCareLinkCSVTest {
     @Test
     public void testExport() throws Exception {
         
-        File file = new File("D:\\realizacje\\SoftProject\\diabetyk\\exporter\\CareLink-Export-1399918014410.csv");
+        File file = new File("D:\\realizacje\\SoftProject\\diabetyk\\exporter\\CareLink-Export-1400057247955.csv");
         
         Iterable<Mensuration> res = importCareLinkCSV.read(file, 11);
         

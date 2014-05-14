@@ -13,18 +13,13 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.text.ParseException;
-import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.log4j.Logger;
 import pl.com.softproject.carelinkexporter.model.BolusType;
 import pl.com.softproject.carelinkexporter.model.Mensuration;
 import pl.com.softproject.carelinkexporter.model.RecordType;
@@ -66,15 +61,13 @@ public class ImportCareLinkCSV {
             // skip lines
         }
 
-        int lp = 0;
+        int lp = 1;
 
         Mensuration previousRecord = null;
         Mensuration currentRecord = null;
         
         while (reader.readRecord()) {
             try {
-                String idx = reader.get(0);
-                //System.out.println(idx);
                                 
                 currentRecord = processRecord(lp, reader);
                 
@@ -85,11 +78,11 @@ public class ImportCareLinkCSV {
                 if(previousRecord != null) {
                     if(previousRecord.getRecordType() != null) {
                         final Duration durationBetweenRecords = Duration.between(previousRecord.getDate(), currentRecord.getDate());
-                        System.out.println(DurationFormatter.format(durationBetweenRecords) + " " + currentRecord.getLp() + " do " + previousRecord.getLp());
+                        logger.debug(DurationFormatter.format(durationBetweenRecords) + " " + currentRecord.getLp() + " do " + previousRecord.getLp());
                         if(durationBetweenRecords.compareTo(durationToMerge) < 0 && checkCanMerge(currentRecord, previousRecord)) {
                             mergeRecords(currentRecord, previousRecord);
-                            System.out.println("current " + currentRecord);
-                            System.out.println("merged " + previousRecord);
+                            logger.debug("current " + currentRecord);
+                            logger.debug("merged " + previousRecord);
                             previousRecord = currentRecord;
                             lp++;
                             continue;
@@ -97,7 +90,7 @@ public class ImportCareLinkCSV {
                     }
                 }
                 
-                System.out.println(currentRecord);
+                logger.debug(currentRecord);
 
                 res.add(currentRecord);
                 previousRecord = currentRecord;
@@ -105,9 +98,12 @@ public class ImportCareLinkCSV {
                 lp++;
                 
             } catch (ParseException | RuntimeException ex) {
-                logger.log(Level.SEVERE, "błąd parsowania wartości z pliku " + ex.getMessage(), ex);
+                logger.error("błąd parsowania wartości z pliku " + ex.getMessage(), ex);
             } 
         }
+        
+        reader.close();
+            
         return res;
     }
     
